@@ -18,6 +18,7 @@ public class PositivePosture {
     public static void main(String[] args) {
         PositivePosture pp = new PositivePosture();
     }
+   
 
     public PositivePosture() {
         setupCognitiveServices();

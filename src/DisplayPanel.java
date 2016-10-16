@@ -13,12 +13,12 @@ public class DisplayPanel extends JPanel {
 
     public DisplayPanel() {
         camPic = new BufferedImage(1280, 1000, BufferedImage.TYPE_INT_ARGB);
+        setBackground(Color.DARK_GRAY);
     }
 
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-        g.fillRect(0, 0, getWidth(), getHeight());
     }
 
     public void drawImage(BufferedImage image) {

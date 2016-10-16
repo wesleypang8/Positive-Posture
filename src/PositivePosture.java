@@ -22,9 +22,11 @@ public class PositivePosture {
     DisplayFrame displayFrame;
     DisplayPanel panel;
     Webcam webcam;
-    Capture capture;
+    Capture captureThread;
+    CalibrateCapture calibrationThread;
     int frameWidth = 1366, frameHeight = 768;
     int faceTop, faceLeft, faceWidth, faceHeight;
+    boolean calibrated = false;
 
     public static void main(String[] args) {
         PositivePosture pp = new PositivePosture();
@@ -34,15 +36,10 @@ public class PositivePosture {
         setupCognitiveServices();
         setupWebcam();
         setupUI();
-        //        triggerNotification();
-
-        //        new Capture().run();
     }
 
     public void setupCognitiveServices() {
         cognitiveServices = new CognitiveServices("45480e1bce5d49028bf803d097db09c5");
-        // Json data returned from Microsoft Cognitive Services
-        //http://www.businessnewsdaily.com/images/i/000/007/961/i02/Photo5.jpg
     }
 
     public void setupWebcam() {
@@ -54,20 +51,41 @@ public class PositivePosture {
     }
 
     public void setupUI() {
-        displayFrame = new DisplayFrame(this, "", frameWidth, frameHeight);
+        displayFrame = new DisplayFrame(this, "Positive Posture", frameWidth, frameHeight);
         panel = displayFrame.panel;
     }
 
     public void runCalibrateCapture() {
-        new Thread(new CalibrateCapture()).start();
+        if (calibrationThread == null || !calibrationThread.isAlive()) {
+            calibrationThread = new CalibrateCapture();
+            calibrationThread.addListener(new ThreadListener() {
+                @Override
+                public void onFinished() {
+                    displayFrame.calibratingLabel.setVisible(false);
+                }
+            });
+            calibrationThread.start();
+            displayFrame.calibratingLabel.setVisible(true);
+        }
     }
 
     public void runCapture() {
-        capture = new Capture();
-        new Thread(capture).start();
+        if (calibrated) {
+            if (captureThread == null || !captureThread.isAlive()) {
+                captureThread = new Capture();
+                captureThread.start();
+                displayFrame.captureLabel.setVisible(true);
+            }
+        }
     }
 
-    class CalibrateCapture implements Runnable {
+    class CalibrateCapture extends Thread {
+        ThreadListener listener;
+
+        public void addListener(ThreadListener listener) {
+            this.listener = listener;
+        }
+
         @Override
         public void run() {
             webcam.open();
@@ -82,11 +100,13 @@ public class PositivePosture {
                 faceHeight = faceRectangle.get("height").getAsInt();
                 panel.drawImage(calibrateImage);
                 panel.drawFaceRectangle(Color.GREEN, faceLeft, faceTop, faceWidth, faceHeight);
+                calibrated = true;
             }
+            listener.onFinished();
         }
     }
 
-    class Capture implements Runnable {
+    class Capture extends Thread {
         long lastCaptureTime = 0;
         long timeBetweenCaptures = 5000;
         volatile boolean run = true;
@@ -112,9 +132,15 @@ public class PositivePosture {
                             out = true;
                         }
 
-                        panel.drawFaceRectangle(out ? Color.BLUE : Color.RED,
-                        faceRectangle.get("left").getAsInt(), faceRectangle.get("top").getAsInt(),
-                        faceRectangle.get("width").getAsInt(),
+                        Color drawColor = null;
+                        if (out) {
+                            triggerNotification();
+                            drawColor = Color.BLUE;
+                        } else {
+                            drawColor = Color.RED;
+                        }
+                        panel.drawFaceRectangle(drawColor, faceRectangle.get("left").getAsInt(),
+                        faceRectangle.get("top").getAsInt(), faceRectangle.get("width").getAsInt(),
                         faceRectangle.get("height").getAsInt());
                     }
                 }
@@ -157,7 +183,7 @@ public class PositivePosture {
         } catch (AWTException e) {
             e.printStackTrace();
         }
-        trayIcon.displayMessage("Hello, World", "notification demo", MessageType.INFO);
+        trayIcon.displayMessage("Posture Alert", "Bad Posture", MessageType.NONE);
     }
 
 }

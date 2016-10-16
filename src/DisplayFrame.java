@@ -8,7 +8,6 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-
 public class DisplayFrame extends JFrame implements WindowListener {
     PositivePosture pp;
     DisplayPanel panel;
@@ -22,7 +21,7 @@ public class DisplayFrame extends JFrame implements WindowListener {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.addWindowListener(this);
         panel = new DisplayPanel();
-        
+
         JPanel containerPanel = new JPanel();
         containerPanel.setLayout(new BorderLayout());
         containerPanel.add(panel, BorderLayout.CENTER);
@@ -62,7 +61,8 @@ public class DisplayFrame extends JFrame implements WindowListener {
 
     @Override
     public void windowClosing(WindowEvent arg0) {
-        pp.capture.run = false;
+        if (pp.capture != null)
+            pp.capture.run = false;
     }
 
     @Override

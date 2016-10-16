@@ -1,22 +1,25 @@
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 
-import javax.swing.JButton;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 public class DisplayFrame extends JFrame implements WindowListener {
     PositivePosture pp;
     DisplayPanel panel;
+    CustomLabel calibratingLabel, captureLabel;
 
     public DisplayFrame(PositivePosture pp, String name, int width, int height) {
         super(name);
 
         this.pp = pp;
-        setVisible(true);
         setSize(width, height);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.addWindowListener(this);
@@ -26,7 +29,14 @@ public class DisplayFrame extends JFrame implements WindowListener {
         containerPanel.setLayout(new BorderLayout());
         containerPanel.add(panel, BorderLayout.CENTER);
         JPanel uiPanel = new JPanel();
-        JButton calibrateButton = new JButton("Calibrate");
+        uiPanel.setBorder(BorderFactory.createLineBorder(Color.WHITE));
+        uiPanel.setBackground(Color.DARK_GRAY);
+
+        calibratingLabel = new CustomLabel("Calibrating...");
+        calibratingLabel.setVisible(false);
+        uiPanel.add(calibratingLabel);
+        uiPanel.add(Box.createHorizontalStrut(100));
+        CustomButton calibrateButton = new CustomButton("Calibrate");
         uiPanel.add(calibrateButton);
         calibrateButton.addActionListener(new ActionListener() {
             @Override
@@ -34,7 +44,8 @@ public class DisplayFrame extends JFrame implements WindowListener {
                 pp.runCalibrateCapture();
             }
         });
-        JButton runButton = new JButton("Run");
+
+        CustomButton runButton = new CustomButton("Run");
         uiPanel.add(runButton);
         runButton.addActionListener(new ActionListener() {
             @Override
@@ -42,9 +53,14 @@ public class DisplayFrame extends JFrame implements WindowListener {
                 pp.runCapture();
             }
         });
+        uiPanel.add(Box.createHorizontalStrut(100));
+        captureLabel = new CustomLabel("Running...");
+        uiPanel.add(captureLabel);
+        captureLabel.setVisible(false);
 
         containerPanel.add(uiPanel, BorderLayout.SOUTH);
         add(containerPanel);
+        setVisible(true);
     }
 
     @Override
@@ -61,8 +77,8 @@ public class DisplayFrame extends JFrame implements WindowListener {
 
     @Override
     public void windowClosing(WindowEvent arg0) {
-        if (pp.capture != null)
-            pp.capture.run = false;
+        if (pp.captureThread != null)
+            pp.captureThread.run = false;
     }
 
     @Override

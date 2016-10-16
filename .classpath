@@ -12,9 +12,13 @@
 	<classpathentry kind="lib" path="libs/httpmime-4.5.2.jar"/>
 	<classpathentry kind="lib" path="libs/jna-4.1.0.jar"/>
 	<classpathentry kind="lib" path="libs/jna-platform-4.1.0.jar"/>
+<<<<<<< 84e7d9f6bda5062ed4bc194422add306bf1b701a
 	<classpathentry kind="lib" path="libs/gson-2.7.jar"/>
 	<classpathentry kind="lib" path="libs/webcam-capture-0.3.10.jar"/>
 	<classpathentry kind="lib" path="libs/bridj-0.6.2.jar"/>
 	<classpathentry kind="lib" path="libs/slf4j-api-1.7.2.jar"/>
+=======
+	<classpathentry kind="lib" path="C:/Users/Andrew/Desktop/Projects/Java/Java/DubHacks2016/libs/webcam cap/webcam-capture-0.3.10.jar"/>
+>>>>>>> reduced .git size
 	<classpathentry kind="output" path="bin"/>
 </classpath>

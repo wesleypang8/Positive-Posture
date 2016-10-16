@@ -1,7 +1,15 @@
+import java.awt.AWTException;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Image;
+import java.awt.SystemTray;
+import java.awt.TrayIcon;
+import java.awt.TrayIcon.MessageType;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 
-import javax.swing.JFrame;
+import javax.imageio.ImageIO;
 
 import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamResolution;
@@ -11,9 +19,12 @@ import com.google.gson.JsonObject;
 public class PositivePosture {
     CognitiveServices cognitiveServices;
     BufferedImage image;
-    JFrame frame;
+    DisplayFrame displayFrame;
     DisplayPanel panel;
     Webcam webcam;
+    Capture capture;
+    int frameWidth = 1366, frameHeight = 768;
+    int faceTop, faceLeft, faceWidth, faceHeight;
 
     public static void main(String[] args) {
         PositivePosture pp = new PositivePosture();
@@ -23,7 +34,9 @@ public class PositivePosture {
         setupCognitiveServices();
         setupWebcam();
         setupUI();
-        new Capture().run();
+        //        triggerNotification();
+
+        //        new Capture().run();
     }
 
     public void setupCognitiveServices() {
@@ -41,42 +54,110 @@ public class PositivePosture {
     }
 
     public void setupUI() {
-        frame = new JFrame("");
-        frame.setVisible(true);
-        frame.setSize(1280, 720);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        panel = new DisplayPanel();
-        frame.add(panel);
+        displayFrame = new DisplayFrame(this, "", frameWidth, frameHeight);
+        panel = displayFrame.panel;
+    }
+
+    public void runCalibrateCapture() {
+        new Thread(new CalibrateCapture()).start();
+    }
+
+    public void runCapture() {
+        capture = new Capture();
+        new Thread(capture).start();
+    }
+
+    class CalibrateCapture implements Runnable {
+        @Override
+        public void run() {
+            webcam.open();
+            BufferedImage calibrateImage = webcam.getImage();
+            webcam.close();
+            JsonArray jsonArray = cognitiveServices.postLocalToFaceAPI(calibrateImage);
+            if (jsonArray.size() > 0) {
+                JsonObject faceRectangle = determineUser(jsonArray);
+                faceTop = faceRectangle.get("top").getAsInt();
+                faceLeft = faceRectangle.get("left").getAsInt();
+                faceWidth = faceRectangle.get("width").getAsInt();
+                faceHeight = faceRectangle.get("height").getAsInt();
+                panel.drawImage(calibrateImage);
+                panel.drawFaceRectangle(Color.GREEN, faceLeft, faceTop, faceWidth, faceHeight);
+            }
+        }
     }
 
     class Capture implements Runnable {
         long lastCaptureTime = 0;
         long timeBetweenCaptures = 5000;
+        volatile boolean run = true;
 
         @Override
         public void run() {
-            //            while (true) {
-            //                if (System.currentTimeMillis() - lastCaptureTime >= timeBetweenCaptures) {
-            //                    lastCaptureTime = System.currentTimeMillis();
-            webcam.open();
-            image = webcam.getImage();
-            webcam.close();
-            panel.camPic = image;
-            panel.drawImage();
+            while (run) {
+                if (System.currentTimeMillis() - lastCaptureTime >= timeBetweenCaptures) {
+                    lastCaptureTime = System.currentTimeMillis();
+                    webcam.open();
+                    image = webcam.getImage();
+                    webcam.close();
+                    panel.drawImage(image);
 
-            JsonArray jsonArray = cognitiveServices.postLocalToFaceAPI(image);
-            for (int i = 0; i < jsonArray.size(); i++) {
-                JsonObject jsonObject = jsonArray.get(i).getAsJsonObject();
-                JsonObject faceRectangle = jsonObject.get("faceRectangle").getAsJsonObject();
-                panel.drawFaceRectangle(faceRectangle.get("left").getAsInt(),
-                faceRectangle.get("top").getAsInt(), faceRectangle.get("width").getAsInt(),
-                faceRectangle.get("height").getAsInt());
+                    JsonArray jsonArray = cognitiveServices.postLocalToFaceAPI(image);
+                    if (jsonArray.size() > 0) {
+                        JsonObject faceRectangle = determineUser(jsonArray);
+
+                        int diffWidth = faceRectangle.get("width").getAsInt() - faceWidth;
+                        int diffHeight = faceRectangle.get("height").getAsInt() - faceHeight;
+                        boolean out = false;
+                        if (diffWidth >= 30 && diffHeight >= 30) {
+                            out = true;
+                        }
+
+                        panel.drawFaceRectangle(out ? Color.BLUE : Color.RED,
+                        faceRectangle.get("left").getAsInt(), faceRectangle.get("top").getAsInt(),
+                        faceRectangle.get("width").getAsInt(),
+                        faceRectangle.get("height").getAsInt());
+                    }
+                }
             }
-
-            //                }
-            //            }
         }
+    }
 
+    public JsonObject determineUser(JsonArray jsonArray) {
+        int maxSize = 0, index = 0;
+        for (int i = 0; i < jsonArray.size(); i++) {
+            JsonObject jsonObject = jsonArray.get(i).getAsJsonObject();
+            JsonObject faceRectangle = jsonObject.get("faceRectangle").getAsJsonObject();
+
+            int width = faceRectangle.get("width").getAsInt();
+            int height = faceRectangle.get("height").getAsInt();
+
+            if (width + height > maxSize) {
+                maxSize = width + height;
+                index = i;
+            }
+        }
+        return jsonArray.get(index).getAsJsonObject().get("faceRectangle").getAsJsonObject();
+    }
+
+    public void triggerNotification() {
+        //Obtain only one instance of the SystemTray object
+        SystemTray tray = SystemTray.getSystemTray();
+
+        Image image = null;
+        try {
+            image = ImageIO.read(new File("icon.png"));
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+        TrayIcon trayIcon = new TrayIcon(image, "Positive Posture");
+        trayIcon.setImageAutoSize(true);
+        trayIcon.setToolTip("Positive Posture");
+        try {
+            tray.add(trayIcon);
+        } catch (AWTException e) {
+            e.printStackTrace();
+        }
+        trayIcon.displayMessage("Hello, World", "notification demo", MessageType.INFO);
     }
 
 }

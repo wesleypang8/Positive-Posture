@@ -31,7 +31,7 @@ public class CognitiveServices {
 
     public JsonArray postLocalToFaceAPI(BufferedImage image) {
         HttpPost httpPost = new HttpPost(
-        "https://api.projectoxford.ai/face/v1.0/detect?returnFaceId=true&returnFaceLandmarks=true");
+                "https://api.projectoxford.ai/face/v1.0/detect?returnFaceId=true&returnFaceLandmarks=true");
         httpPost.setHeader("Content-Type", "application/octet-stream");
         httpPost.setHeader("Ocp-Apim-Subscription-Key", key);
 
@@ -71,9 +71,35 @@ public class CognitiveServices {
         return imageInByte;
     }
 
+    public JsonArray postLocalToEmotionAPI(BufferedImage image) {
+        HttpPost httpPost = new HttpPost("https://api.projectoxford.ai/emotion/v1.0/recognize");
+        httpPost.setHeader("Content-Type", "application/octet-stream");
+        httpPost.setHeader("Ocp-Apim-Subscription-Key", "40e35a21c2764b878bd8d2e471af39b9");
+
+        ByteArrayEntity entity = null;
+        entity = new ByteArrayEntity(imageToByteArray(image));
+        httpPost.setEntity(entity);
+
+        CloseableHttpResponse response = null;
+        try {
+            response = httpClient.execute(httpPost);
+            String str = EntityUtils.toString(response.getEntity());
+            JsonParser parser = new JsonParser();
+            JsonArray jsonArray = parser.parse(str).getAsJsonArray();
+            closeResponse(response);
+            return jsonArray;
+
+        } catch (ClientProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public JsonObject postWebToFaceAPI(String imageURL) {
         HttpPost httpPost = new HttpPost(
-        "https://api.projectoxford.ai/face/v1.0/detect?returnFaceId=true&returnFaceLandmarks=true");
+                "https://api.projectoxford.ai/face/v1.0/detect?returnFaceId=true&returnFaceLandmarks=true");
         httpPost.setHeader("Content-Type", "application/json");
         httpPost.setHeader("Ocp-Apim-Subscription-Key", key);
 

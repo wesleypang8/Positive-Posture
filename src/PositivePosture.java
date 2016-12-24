@@ -40,6 +40,7 @@ public class PositivePosture {
     }
 
     public void setupCognitiveServices() {
+        //Input api key
         cognitiveServices = new CognitiveServices("45480e1bce5d49028bf803d097db09c5");
     }
 
@@ -100,7 +101,7 @@ public class PositivePosture {
                 faceWidth = faceRectangle.get("width").getAsInt();
                 faceHeight = faceRectangle.get("height").getAsInt();
                 panel.drawImage(calibrateImage);
-                panel.drawFaceRectangle(Color.GREEN, faceLeft, faceTop, faceWidth, faceHeight);
+                panel.drawFaceRectangle(Color.YELLOW, faceLeft, faceTop, faceWidth, faceHeight);
                 calibrated = true;
             }
             listener.onFinished();
@@ -111,6 +112,7 @@ public class PositivePosture {
         long lastCaptureTime = 0;
         long timeBetweenCaptures = 5000;
         volatile boolean run = true;
+        BufferedImage cropFace;
 
         @Override
         public void run() {
@@ -126,6 +128,12 @@ public class PositivePosture {
                     if (jsonArray.size() > 0) {
                         JsonObject faceRectangle = determineUser(jsonArray);
 
+                        cropFace = image.getSubimage(faceRectangle.get("left").getAsInt(),
+                                faceRectangle.get("top").getAsInt(), faceRectangle.get("width").getAsInt(),
+                                faceRectangle.get("height").getAsInt());
+                        JsonObject faceInfo = cognitiveServices.postLocalToEmotionAPI(cropFace).get(0).getAsJsonObject().get("scores").getAsJsonObject();
+
+
                         int diffWidth = faceRectangle.get("width").getAsInt() - faceWidth;
                         int diffHeight = faceRectangle.get("height").getAsInt() - faceHeight;
                         boolean out = false;
@@ -139,6 +147,10 @@ public class PositivePosture {
                             drawColor = Color.BLUE;
                         } else {
                             drawColor = Color.RED;
+                        }
+                        
+                        if(faceInfo.get("anger").getAsDouble()>0.1){
+                            ;
                         }
                         panel.drawFaceRectangle(drawColor, faceRectangle.get("left").getAsInt(),
                         faceRectangle.get("top").getAsInt(), faceRectangle.get("width").getAsInt(),
